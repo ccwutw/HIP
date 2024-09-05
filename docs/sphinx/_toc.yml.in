@@ -8,6 +8,8 @@ subtrees:
 - entries:
   - file: what_is_hip
 
+  - file: faq
+
 - caption: Install
   entries:
   - file: install/install
@@ -46,7 +48,6 @@ subtrees:
   - file: how-to/stream_ordered_allocator
   - file: how-to/hipgraph
     title: HIP graphs
-  - file: faq
 
 - caption: Reference
   entries:
@@ -120,3 +121,4 @@ subtrees:
 - caption: About
   entries:
   - file: license.md
+  - file: faq
