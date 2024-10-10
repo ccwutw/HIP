@@ -8,9 +8,6 @@ subtrees:
 - entries:
   - file: what_is_hip
   - file: faq
-    title: Frequently asked questions
-
-  - file: faq
 
 - caption: Install
   entries:
