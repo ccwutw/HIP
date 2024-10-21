@@ -16,6 +16,7 @@ Builtins
 CAS
 clr
 coroutines
+compilable
 Ctx
 cuBLASLt
 cuCtx
@@ -77,6 +78,7 @@ intrinsics
 IPC
 IPs
 isa
+iteratively
 Lapack
 latencies
 libc
