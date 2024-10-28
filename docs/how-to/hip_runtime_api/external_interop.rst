@@ -26,30 +26,28 @@ Semaphore functions are not supported recently on Linux (see: :doc:`../reference
     #include <hip/hip_runtime.h>
     #include <hip/hip_runtime_api.h>
     #include <iostream>
-    #include <fcntl.h>    // For O_* constants
-    #include <sys/stat.h> // For mode constants
-    #include <sys/mman.h> // For memfd_create
-    #include <unistd.h>
+    #include <windows.h>
 
-    int main() {
-        // Create an anonymous file using memfd_create for the semaphore
-        int semFd = memfd_create("my_semaphore", MFD_CLOEXEC);
-        if (semFd == -1) {
-            std::cerr << "Failed to create anonymous file descriptor for semaphore" << std::endl;
+    int main()
+    {
+        // Create a named event for the semaphore
+        HANDLE semHandle = CreateEvent(NULL, FALSE, FALSE, TEXT("my_semaphore_event"));
+        if (semHandle == NULL) {
+            std::cerr << "Failed to create event for semaphore" << std::endl;
             return -1;
         }
 
         hipExternalSemaphore_t extSem;
         hipExternalSemaphoreHandleDesc semHandleDesc = {};
-        semHandleDesc.type = hipExternalSemaphoreHandleTypeOpaqueFd;
-        semHandleDesc.handle.fd = semFd;
+        semHandleDesc.type = hipExternalSemaphoreHandleTypeD3D12Fence;
+        semHandleDesc.handle.win32.handle = semHandle;
         semHandleDesc.flags = 0;
 
         // Import the external semaphore
         hipError_t result = hipImportExternalSemaphore(&extSem, &semHandleDesc);
         if (result != hipSuccess) {
-            std::cerr << "Failed to import external semaphore: " << hipGetErrorString(result)<< std::endl;
-            close(semFd);
+            std::cerr << "Failed to import external semaphore: " << hipGetErrorString(result) << std::endl;
+            CloseHandle(semHandle);
             return -1;
         }
 
@@ -62,7 +60,7 @@ Semaphore functions are not supported recently on Linux (see: :doc:`../reference
         if (result != hipSuccess) {
             std::cerr << "Failed to signal external semaphore: " << hipGetErrorString(result) << std::endl;
             hipDestroyExternalSemaphore(extSem);
-            close(semFd);
+            CloseHandle(semHandle);
             return -1;
         }
 
@@ -75,7 +73,7 @@ Semaphore functions are not supported recently on Linux (see: :doc:`../reference
         if (result != hipSuccess) {
             std::cerr << "Failed to wait on external semaphore: " << hipGetErrorString(result) << std::endl;
             hipDestroyExternalSemaphore(extSem);
-            close(semFd);
+            CloseHandle(semHandle);
             return -1;
         }
 
@@ -83,11 +81,11 @@ Semaphore functions are not supported recently on Linux (see: :doc:`../reference
         result = hipDestroyExternalSemaphore(extSem);
         if (result != hipSuccess) {
             std::cerr << "Failed to destroy external semaphore: " << hipGetErrorString(result) << std::endl;
-            close(semFd);
+            CloseHandle(semHandle);
             return -1;
         }
 
-        close(semFd);
+        CloseHandle(semHandle);
         return 0;
     }
 
@@ -102,47 +100,44 @@ Memory functions focus on the efficient sharing and management of memory resourc
     #include <hip/hip_runtime.h>
     #include <hip/hip_runtime_api.h>
     #include <iostream>
-    #include <fcntl.h>    // For O_* constants
-    #include <unistd.h>   // For close()
-    #include <sys/stat.h> // For mode constants
-    #include <sys/mman.h> // For shm_open
+    #include <windows.h>
 
-    int main() {
-        // Create a shared memory object
-        const char* shmName = "my_shared_memory";
-        int shmFd = shm_open(shmName, O_CREAT | O_RDWR, 0644);
-        if (shmFd == -1) {
+    int main()
+    {
+        // Create a named shared memory object
+        HANDLE sharedMemoryHandle = CreateFileMapping(
+            INVALID_HANDLE_VALUE,
+            NULL,
+            PAGE_READWRITE,
+            0,
+            1024 * 1024,  // 1MB
+            TEXT("MySharedMemory")
+        );
+
+        if (sharedMemoryHandle == NULL) {
             std::cerr << "Failed to create shared memory object" << std::endl;
-            return -1;
-        }
-
-        // Set the size of the shared memory object
-        const size_t memSize = 1024 * 1024; // 1MB
-        if (ftruncate(shmFd, memSize) != 0) {
-            std::cerr << "Failed to set size of shared memory object" << std::endl;
-            close(shmFd);
             return -1;
         }
 
         hipExternalMemory_t extMem;
         hipExternalMemoryHandleDesc memHandleDesc = {};
-        memHandleDesc.type = hipExternalMemoryHandleTypeOpaqueFd;
-        memHandleDesc.handle.fd = shmFd;
-        memHandleDesc.size = memSize;
+        memHandleDesc.type = hipExternalMemoryHandleTypeWin32;
+        memHandleDesc.handle.win32.handle = sharedMemoryHandle;
+        memHandleDesc.size = 1024 * 1024; // 1MB
         memHandleDesc.flags = 0;
 
         // Import the external memory
         hipError_t result = hipImportExternalMemory(&extMem, &memHandleDesc);
         if (result != hipSuccess) {
             std::cerr << "Failed to import external memory: " << hipGetErrorString(result) << std::endl;
-            close(shmFd);
+            CloseHandle(sharedMemoryHandle);
             return -1;
         }
 
         void* devPtr;
         hipExternalMemoryBufferDesc bufferDesc = {};
         bufferDesc.offset = 0;
-        bufferDesc.size = memSize;
+        bufferDesc.size = 1024 * 1024; // 1MB
         bufferDesc.flags = 0;
 
         // Map a buffer onto the imported memory
@@ -150,20 +145,20 @@ Memory functions focus on the efficient sharing and management of memory resourc
         if (result != hipSuccess) {
             std::cerr << "Failed to map buffer onto external memory: " << hipGetErrorString(result) << std::endl;
             hipDestroyExternalMemory(extMem);
-            close(shmFd);
+            CloseHandle(sharedMemoryHandle);
             return -1;
         }
 
-        // Use devPtr in HIP kernels
+        std::cout << "Successfully mapped external memory" << std::endl;
 
         // Destroy the external memory
         result = hipDestroyExternalMemory(extMem);
         if (result != hipSuccess) {
             std::cerr << "Failed to destroy external memory: " << hipGetErrorString(result) << std::endl;
-            close(shmFd);
+            CloseHandle(sharedMemoryHandle);
             return -1;
         }
 
-        close(shmFd);
+        CloseHandle(sharedMemoryHandle);
         return 0;
     }
