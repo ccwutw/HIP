@@ -22,8 +22,14 @@ information.
 What operating systems does HIP support?
 ----------------------------------------
 
-The supported operating systems are listed in the
-:doc:`rocm:compatibility/compatibility-matrix`.
+Linux as well as Windows are supported by ROCm. The exact versions are listed in
+the system requirements for :ref:`rocm-install-on-linux:supported_distributions
+<Linux>` and :ref:`rocm-install-on-windows:supported-skus-win<Windows>`.
+
+.. note::
+   Not all HIP runtime API functions are yet supported on Windows.
+   A note is added to those functions' documentation in the
+   :ref:`runtime_api_reference<HIP runtime API reference>`.
 
 What libraries does HIP provide?
 --------------------------------
