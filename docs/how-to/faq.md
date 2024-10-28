@@ -283,6 +283,14 @@ One notable exception is that `hipError_t` is a new type, and cannot be used whe
 
 If platform portability is important, use `#ifdef __HIP_PLATFORM_NVIDIA__` to guard the CUDA-specific code.
 
+## Why can't NVCC compile my .hip files?
+
+NVCC does not recognize files with the `.hip` file extension. You must rename the source file extension to one NVCC supports, like `.cpp`. See [NVCC Supported Input File suffixes](https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/#supported-input-file-suffixes).
+
+This applies when using hipcc to compile .hip files through NVCC (i.e. by setting HIP_PLATFORM=nvidia).
+
+Without a valid file extension, NVCC will report: ```nvcc fatal : Don't know what to do with '/<filename>.hip.```
+
 ## How do I trace HIP application flow?
 
 See {doc}`/how-to/logging` for more information.
